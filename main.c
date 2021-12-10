@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #include <sys/types.h> 
 #include <sys/socket.h> 
@@ -17,7 +19,7 @@
 void HandleClient(int fd);
 
 int main() {
-    printf("Server started at %shttp://127.0.0.1:%s%s\n", "\033[92m", PORT, "\033[0m");
+    printf("Server started at %shttp://127.0.0.1:%d%s\n", "\033[92m", PORT, "\033[0m");
 
     /* create socket for listening  */
     printf("Create a socket...\n");
