@@ -7,6 +7,17 @@
 #include <error.h>
 #include <string.h>
 
+
+void chop_left(BufferState* state, size_t bytes) {
+    assert(state);
+    assert(state->buffer);
+    assert(state->size >= bytes);
+
+    state->buffer += bytes;
+    state->size -= bytes;
+    state->capacity -= bytes;
+}
+
 /* 
  * Read from socket to buffer of maxsize `size`
 
@@ -58,21 +69,19 @@ int write_some(int fd, char *buffer, size_t size) {
  * Note, can modify `*size` to indicate how many bytes we've read 
  * 
  * @param fd socket descriptor
- * @param dst buffer where the data is being stored
- * @param size bytes in the `dst` buffer with valid (e.g., already read but not proccessed) data
- * @param capacity `dst` buffer capacity. So number of bytes can be used equal to `capacity - *size` 
+ * @param state pointer to current state of the some global buffer
  * @param pattern reading until it meet this substring
  * 
  * @return pointer to the matched string on success otherwise return NULL
 */
-char* read_until(int fd, char *dst, size_t *size, size_t capacity, char *pattern) {
-    assert(size != NULL);
-    assert(dst != NULL && pattern != NULL);
+char* read_until(int fd, BufferState *state, char *pattern) {
+    assert(state != NULL);
+    assert(pattern != NULL);
 
     size_t pattern_len = strlen(pattern);
-    char *search_start = dst;
+    char *search_start = state->buffer;
     // pointer where the search for the pattern will start
-    char *read_start = dst + *size;
+    char *read_start =  state->buffer + state->size;
     // read while we have enough space
     while (search_start != NULL) {
         // confirm that it's enough data where we can search for the pattern
@@ -95,20 +104,20 @@ char* read_until(int fd, char *dst, size_t *size, size_t capacity, char *pattern
                 search_start += search_len - pattern_len + 1;
             }
         }
-        if (capacity <= *size + 1) {
+        if (state->capacity <= state->size + 1) {
             // Not enough memory to read more
 			// Note, add 1 because read_some adds '\0'
             return NULL;
         }
         // else read not enough characters for the search
-        int read_bytes = read_some(fd, read_start, capacity - *size);
+        int read_bytes = read_some(fd, read_start, state->capacity - state->size);
         if (read_bytes <= 0) {
 			// meet either EOF either error
             return NULL;
         }
 
         read_start += read_bytes;
-        *size += read_bytes;
+        state->size += read_bytes;
     }
     // found nothing but capacity is not enough
     return NULL;

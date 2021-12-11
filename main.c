@@ -78,19 +78,20 @@ void HandleClient(int fd) {
     char buffer[BUFFER_SIZE + 1];
     char *pattern = "\r\n";
 
-    char *free_buffer = buffer;
-    size_t size = 0;
-    size_t capacity = BUFFER_SIZE;
+    BufferState state {
+        .buffer = buffer,
+        .size = 0,
+        .capacity = BUFFER_SIZE
+    };
+
     size_t pattern_len = strlen(pattern);
     char *match = NULL;
-    while ((match = read_until(fd, free_buffer, &size, capacity, pattern)) != NULL) {
-        size_t consumed = match - free_buffer;
+    while ((match = read_until(fd, &state, pattern)) != NULL) {
+        size_t consumed = match - state.buffer;
         *match = '\0';
-        printf("read_until: %s\n", free_buffer);
-        capacity -= consumed + pattern_len;
-        free_buffer = match + pattern_len;
-        assert(size >= consumed + pattern_len);
-        size -= consumed + pattern_len;
+        printf("read_until: %s\n", state.buffer);
+        assert(state.size >= consumed + pattern_len);
+        chop_left(&state, consumed + pattern_len);
     }
     if (size > 0) {
         printf("read_until: %s\n", free_buffer);

@@ -3,6 +3,14 @@
 
 #include <stddef.h> // size_t
 
+typedef struct {
+    char *buffer; // pointer to the `buffer`. Not owning any memory
+    size_t size; // how much is filled starting from address pointed by `buffer`
+    size_t capacity; // full `buffer` capacity
+} BufferState;
+
+void chop_left(BufferState* state, size_t bytes);
+
 /* 
  * Read from socket to buffer of maxsize `size`
 
@@ -25,13 +33,11 @@ int write_some(int fd, char *buffer, size_t size);
  * Note, can modify `*size` to indicate how many bytes we've read 
  * 
  * @param fd socket descriptor
- * @param dst buffer where the data is being stored
- * @param size bytes in the `dst` buffer with valid (e.g., already read but not proccessed) data
- * @param capacity `dst` buffer capacity. So number of bytes can be used equal to `capacity - *size` 
+ * @param state pointer to current state of the some global buffer
  * @param pattern reading until it meet this substring
  * 
  * @return pointer to the matched string on success otherwise return NULL
 */
-char* read_until(int fd, char *dst, size_t *size, size_t capacity, char *pattern);
+char* read_until(int fd, BufferState *state, char *pattern);
 
 #endif // IO_WRAPPERS_H__
