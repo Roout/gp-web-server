@@ -114,9 +114,22 @@ int write_some(int fd, char *buffer, size_t size) {
     return total_bytes;
 }
 
+/**
+ * Read from socket with descriptor `fd` to `dst` buffer starting from position `*size`
+ * until either `*size` becomes equal `capacity` or the `pattern` is met. 
+ * Note, can modify `*size` to indicate how many bytes we've read 
+ * 
+ * @param fd socket descriptor
+ * @param dst buffer where the data is being stored
+ * @param size bytes in the `dst` buffer with valid (e.g., already read but not proccessed) data
+ * @param capacity `dst` buffer capacity. So number of bytes can be used equal to `capacity - *size` 
+ * @param pattern reading until it meet this substring
+ * 
+ * @return pointer to the matched string on success otherwise return NULL
+*/
 char* read_until(int fd, char *dst, size_t *size, size_t capacity, char *pattern) {
     assert(size != NULL);
-    assert(pattern != NULL);
+    assert(dst != NULL && pattern != NULL);
 
     size_t pattern_len = strlen(pattern);
     char *search_start = dst;
