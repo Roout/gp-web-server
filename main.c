@@ -13,7 +13,10 @@
 #include "iowrap.h"
 #include "server.h"
 
+#define HOST "127.0.0.1"
 #define PORT "18000"
+#define BACKLOG 64
+
 #define CRLF "\r\n"
 
 // client buffer
@@ -22,8 +25,10 @@
 void HandleClient(int fd);
 
 int main() {
+    printf("Server started at %s%s:%s%s\n", "\033[92m", HOST, PORT, "\033[0m");
+
     Server server;
-    InitServer(&server, PORT);
+    InitServer(&server, HOST, PORT, BACKLOG);
     // accept clients
     while (1) {
 		int client_fd = AcceptClient(&server);
