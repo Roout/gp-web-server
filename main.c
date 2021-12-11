@@ -108,45 +108,50 @@ void HandleClient(int fd) {
     char buffer[BUFFER_SIZE + 1];
     char *pattern = CRLF;
 
-    BufferState state {
+    BufferState state = {
         .buffer = buffer,
         .size = 0,
         .capacity = BUFFER_SIZE
     };
 
     // read header
-    char *match = read_until(fd, state, pattern);
+    char *match = read_until(fd, &state, pattern);
     if (match == NULL) {
-        printf(stderr, "Failed to read header.\n");
+        fprintf(stderr, "Failed to read header.\n");
         exit(1);
     }
     // header is the line: [buffer, match)
     *match = '\0';
-    char *line = state->buffer;
+    char *line = state.buffer;
     // update state
-    chop_left(state, (match - line) + strlen(pattern));
-
+    chop_left(&state, (match - line) + strlen(pattern));
+		
     RequestHeader header;
     if (ParseHeader(line, &header) < 0) {
         // TODO: handle error
+				fprintf(stderr, "Fail to parse a header\n");
         close(fd);
         exit(1);
     }
 
-    if (strcmp(header->method, "GET")) {
+		// printf("header.method: %s\n", header.method);
+		// printf("header.path: %s\n", header.path);
+		// printf("header.protocol: %s\n", header.protocol);
+
+    if (!strcmp(header.method, "GET")) {
         while (match != NULL) {
-            match = read_until(fd, state, CRLF);
+            match = read_until(fd, &state, CRLF);
             if (match == NULL) {
                 // TODO: handle error
                 close(fd);
                 exit(1);
             }
-            if (state->buffer == match) {
+            if (state.buffer == match) {
                 // meet the combination CRLF CRLF
                 break;
             }
-            char *line = state->buffer;
-            chop_left(state, (match - line) + strlen(pattern));
+            char *line = state.buffer;
+            chop_left(&state, (match - line) + strlen(pattern));
             char *field = strtok(line, ": ");
             char *value = strtok(NULL, "\r\n");
             assert(*match == '\0');
@@ -157,14 +162,16 @@ void HandleClient(int fd) {
         char default_answer[] = "HTTP/1.1 200 OK" CRLF "Content-Length: 0" CRLF CRLF;
         write_some(fd, default_answer, strlen(default_answer));
     }
-    else if (strcmp(header->method, "POST")) {
+    else if (!strcmp(header.method, "POST")) {
         // TODO: check what answer is needed in rfc
         char default_answer[] = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
+				printf("Send: %s\n", default_answer); 
         write_some(fd, default_answer, strlen(default_answer));
     }
     else {
         char default_answer[] = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
-        write_some(fd, default_answer, strlen(default_answer));
+ 				printf("Send: %s\n", default_answer);
+				write_some(fd, default_answer, strlen(default_answer));
     }
     
     close(fd);

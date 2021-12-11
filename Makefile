@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c11 -Wall -Werror -pedantic -Wextra
+CFLAGS=-std=c17 -Wall -Werror -pedantic -Wextra
 
 all: server
 
@@ -7,7 +7,7 @@ server: iowrap.o main.c
 	$(CC) $(CFLAGS) iowrap.o main.c -g -o server
 
 iowrap.o: iowrap.c
-	$(CC) $(CFLAGS) iowrap.h iowrap.c -g -c -o iowrap.o
+	$(CC) $(CFLAGS) iowrap.h -g -c iowrap.c
 
 clean:
 	rm *.o server

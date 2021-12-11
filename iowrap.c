@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <error.h>
 #include <string.h>
-
+#include <unistd.h>
 
 void chop_left(BufferState* state, size_t bytes) {
     assert(state);
