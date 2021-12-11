@@ -11,9 +11,10 @@
 #include <unistd.h>		// close
 
 #include "iowrap.h"
+#include "server.h"
 
-#define PORT 18000
-#define LISTEN_QUEUE_SIZE 10
+#define PORT "18000"
+#define CRLF "\r\n"
 
 // client buffer
 #define BUFFER_SIZE (1<<16)
@@ -21,54 +22,11 @@
 void HandleClient(int fd);
 
 int main() {
-    printf("Server started at %shttp://127.0.0.1:%d%s\n", "\033[92m", PORT, "\033[0m");
-
-    /* create socket for listening  */
-    printf("Create a socket...\n");
-    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_fd < 0) {
-        fprintf(stderr, "Failed to create a socket: %s\n", strerror(errno));
-        exit(1);
-    }
-
-    // bind socket
-    printf("Bind a socket...\n");
-	struct sockaddr_in server_addr;
-	memset(&server_addr, 0, sizeof(server_addr));
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_addr.sin_port = htons(PORT);
-
-	int ec = bind(listen_fd, (struct sockaddr*)(&server_addr), sizeof(server_addr));
-	if (ec < 0) {
-		fprintf(stderr, "Failed to bind a socket: %s\n", strerror(errno));
-		exit(1);
-	}
-
-    /* listen socket */
-    printf("Listen a socket...\n");
-    ec = listen(listen_fd, LISTEN_QUEUE_SIZE);
-    if (ec < 0) {
-        fprintf(stderr, "Failed to listen a socket %d: %s\n"
-            , listen_fd
-            , strerror(errno));
-        exit(1);
-    }
-    
+    Server server;
+    InitServer(&server, PORT);
     // accept clients
-    struct sockaddr_in client_addr;
     while (1) {
-		memset(&client_addr, 0, sizeof(client_addr));	
-		socklen_t addr_len = sizeof(client_addr);
-		int client_fd = accept(listen_fd, (struct sockaddr*)(&client_addr), &addr_len);
-		if (client_fd < 0) {
-            fprintf(stderr, "Failed to accept a client %d: %s\n"
-                , client_fd
-                , strerror(errno));
-            continue;
-		}
-        // handle accepted client
-        printf("Handle client...\n");
+		int client_fd = AcceptClient();
         HandleClient(client_fd);
     }
     return 0;
@@ -101,8 +59,6 @@ int ParseHeader(char* data, RequestHeader* header) {
     return 0;
 }
 
-#define CRLF "\r\n"
-
 void HandleClient(int fd) {
     // global buffer for this client
     char buffer[BUFFER_SIZE + 1];
@@ -129,14 +85,10 @@ void HandleClient(int fd) {
     RequestHeader header;
     if (ParseHeader(line, &header) < 0) {
         // TODO: handle error
-				fprintf(stderr, "Fail to parse a header\n");
+        fprintf(stderr, "Fail to parse a header\n");
         close(fd);
         exit(1);
     }
-
-		// printf("header.method: %s\n", header.method);
-		// printf("header.path: %s\n", header.path);
-		// printf("header.protocol: %s\n", header.protocol);
 
     if (!strcmp(header.method, "GET")) {
         while (match != NULL) {
@@ -165,13 +117,13 @@ void HandleClient(int fd) {
     else if (!strcmp(header.method, "POST")) {
         // TODO: check what answer is needed in rfc
         char default_answer[] = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
-				printf("Send: %s\n", default_answer); 
+        printf("Send: %s\n", default_answer); 
         write_some(fd, default_answer, strlen(default_answer));
     }
     else {
         char default_answer[] = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
- 				printf("Send: %s\n", default_answer);
-				write_some(fd, default_answer, strlen(default_answer));
+        printf("Send: %s\n", default_answer);
+        write_some(fd, default_answer, strlen(default_answer));
     }
     
     close(fd);
