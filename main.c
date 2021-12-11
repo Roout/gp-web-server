@@ -84,8 +84,8 @@ int read_some(int fd, char *buffer, size_t size) {
     if (read_bytes == 0) {
         fprintf(stderr, "Reading from socket %d reached EOF: %s\n"
             , fd, strerror(errno));
-				buffer[0] = '\0';
-				return 0;
+        buffer[0] = '\0';
+        return 0;
     }
     else if (read_bytes < 0) {
         fprintf(stderr, "Failed to read from socket %d: %s\n"
@@ -162,13 +162,13 @@ char* read_until(int fd, char *dst, size_t *size, size_t capacity, char *pattern
         }
         if (capacity <= *size + 1) {
             // Not enough memory to read more
-						// Note, add 1 because read_some adds '\0'
+			// Note, add 1 because read_some adds '\0'
             return NULL;
         }
         // else read not enough characters for the search
         int read_bytes = read_some(fd, read_start, capacity - *size);
         if (read_bytes <= 0) {
-						// meet either EOF either error
+			// meet either EOF either error
             return NULL;
         }
 
@@ -197,8 +197,8 @@ void HandleClient(int fd) {
         assert(size >= consumed + pattern_len);
         size -= consumed + pattern_len;
     }
-		if (size > 0) {
-				printf("read_until: %s\n", free_buffer);
-		}
+    if (size > 0) {
+        printf("read_until: %s\n", free_buffer);
+    }
     (void) close(fd);
 }
