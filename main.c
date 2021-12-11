@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <assert.h>
+#include <error.h> 
+#include <string.h> 
 
 #include <sys/types.h> 
 #include <sys/socket.h> 
 #include <arpa/inet.h>	// htonl
 #include <unistd.h>		// close
-
-#include <error.h> 
-#include <string.h> 
 
 #define PORT 18000
 #define LISTEN_QUEUE_SIZE 10
@@ -74,15 +74,18 @@ int main() {
 
 /* 
  * Read from socket to buffer of maxsize `size`
- * Return -1 if some error occured
- * otherwise return number of read bytes on success and fill the buffer with null-terminated string
+
+ * @return -1 if some error occured, 0 on EOF,
+ *					otherwise return number of read bytes on success
+ *					and fill the buffer with null-terminated string
  */
 int read_some(int fd, char *buffer, size_t size) {
     int read_bytes = read(fd, buffer, size - 1);
     if (read_bytes == 0) {
         fprintf(stderr, "Reading from socket %d reached EOF: %s\n"
             , fd, strerror(errno));
-        return -1;
+				buffer[0] = '\0';
+				return 0;
     }
     else if (read_bytes < 0) {
         fprintf(stderr, "Failed to read from socket %d: %s\n"
@@ -99,7 +102,7 @@ int read_some(int fd, char *buffer, size_t size) {
  * otherwise return number of written bytes on success
  */
 int write_some(int fd, char *buffer, size_t size) {
-    int total_bytes = 0;
+    size_t total_bytes = 0;
     // we need to confirm that the whole buffer is sent
     while (total_bytes < size) {
         int write_bytes = write(fd, buffer, size);
@@ -157,13 +160,15 @@ char* read_until(int fd, char *dst, size_t *size, size_t capacity, char *pattern
                 search_start += search_len - pattern_len + 1;
             }
         }
-        if (capacity == *size) {
-            // Not enough memory to rad more
+        if (capacity <= *size + 1) {
+            // Not enough memory to read more
+						// Note, add 1 because read_some adds '\0'
             return NULL;
         }
         // else read not enough characters for the search
         int read_bytes = read_some(fd, read_start, capacity - *size);
         if (read_bytes <= 0) {
+						// meet either EOF either error
             return NULL;
         }
 
@@ -176,7 +181,6 @@ char* read_until(int fd, char *dst, size_t *size, size_t capacity, char *pattern
 
 void HandleClient(int fd) {
     char buffer[BUFFER_SIZE + 1];
-    size_t size;
     char *pattern = "\r\n";
 
     char *free_buffer = buffer;
@@ -193,7 +197,8 @@ void HandleClient(int fd) {
         assert(size >= consumed + pattern_len);
         size -= consumed + pattern_len;
     }
-    free_buffer[size] = '\0';
-    printf("read_until: %s\n", free_buffer);
+		if (size > 0) {
+				printf("read_until: %s\n", free_buffer);
+		}
     (void) close(fd);
 }
