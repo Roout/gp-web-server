@@ -26,7 +26,7 @@ int main() {
     InitServer(&server, PORT);
     // accept clients
     while (1) {
-		int client_fd = AcceptClient();
+		int client_fd = AcceptClient(&server);
         HandleClient(client_fd);
     }
     return 0;

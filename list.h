@@ -1,16 +1,16 @@
 #ifndef LIST_H__
 #define LIST_H__
 
-typedef struct {
+struct Node {
     char *path;
     char *file;
-    Node *next;
-} Node;
+    struct Node *next;
+};
 
-void Insert(Node **head, const char* path, const char* file);
+void Insert(struct Node **head, const char* path, const char* file);
 
-void Clean(Node **head);
+void Clean(struct Node **head);
 
-Node* Find(Node* head, const char* path);
+struct Node* Find(struct Node* head, const char* path);
 
 #endif // LIST_H__

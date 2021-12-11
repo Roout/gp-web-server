@@ -4,12 +4,15 @@
 #include "list.h"
 
 #define LISTEN_QUEUE_SIZE 64
+#define MAX_HOST_LEN 256
+
+#define _POSIX_C_SOURCE 200112L
 
 typedef struct {
-    char *port;
-    char *name;
+    const char *port;
+    char name[MAX_HOST_LEN];
     int fd;
-    Node *route;
+    struct Node *route;
 } Server;
 
 // initialize a server
