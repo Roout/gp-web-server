@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string.h> 
 
-#include <unistd.h>		// close
+#include <unistd.h>		// close, fork
 
 #include "iowrap.h"
 #include "server.h"
@@ -26,10 +26,27 @@ int main() {
 
     Server server;
     init_server(&server, HOST, PORT, BACKLOG);
+
+    // ignore SIGCHLD to avoid zombie threads
+    signal(SIGCHLD, SIG_IGN);
     // accept clients
     while (1) {
-			int client_fd = accept_client(&server);
-      handle_client(client_fd);
+		int client_fd = accept_client(&server);
+        int pid = fork();
+        if (pid < 0) {
+            fprintf(stderr, "Failed to create a child proccess for the new client.\n");
+            fprintf(stderr, "Reason: %s\n", strerror(errno));
+            close(client_fd);
+        }
+        else if (pid == 0) {
+            handle_client(client_fd);
+            exit(EXIT_SUCCESS);
+        }
+        else {
+            // parent proccess
+            // close the fd because the child should own it now
+            close(client_fd);
+        }
     }
     return 0;
 }
@@ -45,7 +62,7 @@ typedef struct {
  * @param header parsing result on success
  * @return 0 on success otherwise -1
 */
-int parse_header(char* data, RequestHeader* header) {
+static int parse_header(char* data, RequestHeader* header) {
     header->method = strtok(data, " ");
     if (header->method == NULL) {
         return -1;
@@ -117,7 +134,7 @@ static void handle_client(int fd) {
         write_some(fd, default_response, strlen(default_response));
     }
     else {
-        const char *default_response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+        const char *default_response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
         write_some(fd, default_response, strlen(default_response));
     }
     
