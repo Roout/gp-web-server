@@ -1,0 +1,4 @@
+/res/test/other/route.txt
+/res/test/other/test.html
+/res/about.txt
+/res/index.txt
