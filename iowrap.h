@@ -47,10 +47,4 @@ int write_some(int fd, char *buffer, size_t size);
 */
 char* read_until(int fd, BufferState *state, char *pattern);
 
-/**
- * Read the whole file `filename` to buffer `dst` and allocate memory for it
- * @return 0 on success, otherwise -1
- */
-int read_file(const char* filename, Buffer* dst);
-
 #endif // IO_WRAPPERS_H__

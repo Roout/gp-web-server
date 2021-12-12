@@ -1,8 +1,6 @@
 #ifndef SERVER_H__
 #define SERVER_H__
 
-#include "list.h"
-
 // Feature Test Macro Requirements for glibc
 // getnameinfo():
 //            Since glibc 2.22:
@@ -12,19 +10,19 @@
 
 typedef struct {
     int fd;
-    struct Node *route;
 } Server;
 
-// initialize a server
+/**
+ * Initialize a server
+ * @param host is a hostname used by server. Host and port will be resolved by getaddrinfo
+ * @param port is a port used by server
+ * @
+ */
 void init_server(Server *server
     , const char* host
     , const char* port
     , const int backlog);
 
 int accept_client(Server *server);
-
-void register_route(Server *server, const char* route, const char* file);
-
-const char * get_file(Server *server, const char* route);
 
 #endif // SERVER_H__

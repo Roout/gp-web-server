@@ -39,7 +39,7 @@ int main() {
 
 typedef struct {
     char *method;   // GET or POST
-    char *route;     // /route/to/file
+    char *route;    // /route/to/file
     char *protocol; // HTTP/1.1
 } RequestHeader;
 
@@ -81,7 +81,7 @@ void handle_client(Server* server, int fd) {
         fprintf(stderr, "Failed to read header.\n");
         exit(EXIT_FAILURE);
     }
-    // header is the line: [buffer, match)
+    // header is a line: [buffer, match)
     *match = '\0';
     char *line = state.buffer;
     // update state
@@ -89,7 +89,6 @@ void handle_client(Server* server, int fd) {
 		
     RequestHeader header;
     if (parse_header(line, &header) < 0) {
-        // TODO: handle error
         fprintf(stderr, "Fail to parse a header\n");
         close(fd);
         exit(EXIT_FAILURE);
@@ -114,36 +113,16 @@ void handle_client(Server* server, int fd) {
             assert(*match == '\0');
             printf("Parse: %s:%s\n", field, value);
         }
-        // TODO: check what answer is needed in rfc
-        const char *default_response = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
-        char response[256];
-        const char *file = get_file(server, header.route);
-        Buffer file_buffer;
-        if (file && read_file(file, &file_buffer) != -1) {
-            sprintf(response
-								, "HTTP/1.1 200 OK" CRLF "Content-Length: %zu" CRLF CRLF "%s"
-                , file_buffer.size
-                , file_buffer.buffer);
-            // cleanup
-            free(file_buffer.buffer);
-            file_buffer.buffer = NULL;
-            file_buffer.size = 0;
-        }
-        else {
-            strcpy(response, default_response);
-        }
-        write_some(fd, response, strlen(response));
+        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        write_some(fd, default_response, strlen(default_response));
     }
     else if (!strcmp(header.method, "POST")) {
-        // TODO: check what answer is needed in rfc
-        char default_answer[] = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
-        printf("Send: %s\n", default_answer); 
-        write_some(fd, default_answer, strlen(default_answer));
+        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+        write_some(fd, default_response, strlen(default_response));
     }
     else {
-        char default_answer[] = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
-        printf("Send: %s\n", default_answer);
-        write_some(fd, default_answer, strlen(default_answer));
+        const char *default_response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+        write_some(fd, default_response, strlen(default_response));
     }
     
     close(fd);
