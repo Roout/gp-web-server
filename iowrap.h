@@ -11,6 +11,13 @@ typedef struct {
 
 void chop_left(BufferState* state, size_t bytes);
 
+// Owing memory buffer
+// Memory need to be freed
+typedef struct {
+    char *buffer;
+    size_t size;
+} Buffer;
+
 /* 
  * Read from socket to buffer of maxsize `size`
 
@@ -39,5 +46,11 @@ int write_some(int fd, char *buffer, size_t size);
  * @return pointer to the matched string on success otherwise return NULL
 */
 char* read_until(int fd, BufferState *state, char *pattern);
+
+/**
+ * Read the whole file `filename` to buffer `dst` and allocate memory for it
+ * @return 0 on success, otherwise -1
+ */
+int read_file(const char* filename, Buffer* dst);
 
 #endif // IO_WRAPPERS_H__

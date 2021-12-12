@@ -122,3 +122,45 @@ char* read_until(int fd, BufferState *state, char *pattern) {
     // found nothing but capacity is not enough
     return NULL;
 }
+
+int read_file(const char* filename, Buffer *dst) {
+    assert(buffer);
+    assert(filename);
+
+    FILE* file = open(filename, "rb");
+    if (file == NULL) {
+        fprintf(stderr, "Fail to open the file %s with error: %s\n"
+            , filename
+            , strerror(errno));
+        return -1;
+    }
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    if (filesize == EOF) {
+        return -1;
+    }
+    char *buffer = (char*) malloc(sizeof(char) * (size + 1));
+    if (buffer == NULL) {
+        fprintf(stderr, "Not enough memory for the file %s\n"
+            , filename);
+        return -1;
+    }
+    buffer[size] = '\0';
+    // set cursor to the file's begining
+    rewind(file);
+    // read
+    size_t read_items = fread(buffer, 1, size, file);
+    if (read_items < size) {
+        fprintf(stderr, "Fail to read the file %s with error: %s\n"
+            , filename
+            , strerror(errno));
+        free(buffer);
+        return -1;
+    }
+    // update buffer
+    dst->buffer = buffer;
+    dst->size = size;
+    fclose(file);
+    // success
+    return 0;
+}
