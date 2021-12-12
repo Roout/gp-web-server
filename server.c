@@ -57,17 +57,17 @@ void init_server(Server *server
         if (fd == -1) {
             continue;
         }
-        
-        if (bind(fd, curr->ai_addr, curr->ai_addrlen) == -1) { 
-            close(fd);
-            fd = -1;
-            continue;
-        }
 
         // set reuse address option to prevent 
         // failure on bind for different IP but same PORT addresses
         int reuse = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1) {
+            close(fd);
+            fd = -1;
+            continue;
+        }
+
+        if (bind(fd, curr->ai_addr, curr->ai_addrlen) == -1) { 
             close(fd);
             fd = -1;
             continue;

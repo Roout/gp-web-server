@@ -7,7 +7,6 @@
 
 #include <sys/types.h> 
 #include <sys/socket.h> 
-#include <arpa/inet.h>	// htonl
 #include <unistd.h>		// close
 
 #include "iowrap.h"
@@ -17,22 +16,20 @@
 #define PORT "18000"
 #define BACKLOG 64
 
-#define CRLF "\r\n"
-
 // client buffer
 #define BUFFER_SIZE (1<<16)
 
-void handle_client(Server *server, int fd);
+void handle_client(int fd);
 
 int main() {
-    printf("Server started at %s%s:%s%s\n", "\033[92m", HOST, PORT, "\033[0m");
+    printf("Server started at %shttp://%s:%s%s\n", "\033[92m", HOST, PORT, "\033[0m");
 
     Server server;
     init_server(&server, HOST, PORT, BACKLOG);
     // accept clients
     while (1) {
-		int client_fd = accept_client(&server);
-        handle_client(&server, client_fd);
+			int client_fd = accept_client(&server);
+      handle_client(client_fd);
     }
     return 0;
 }
@@ -64,10 +61,10 @@ int parse_header(char* data, RequestHeader* header) {
     return 0;
 }
 
-void handle_client(Server* server, int fd) {
+void handle_client(int fd) {
     // global buffer for this client
     char buffer[BUFFER_SIZE + 1];
-    char *pattern = CRLF;
+    const char *pattern = "\r\n";
 
     BufferState state = {
         .buffer = buffer,
@@ -96,28 +93,27 @@ void handle_client(Server* server, int fd) {
 
     if (!strcmp(header.method, "GET")) {
         while (match != NULL) {
-            match = read_until(fd, &state, CRLF);
+            match = read_until(fd, &state, pattern);
             if (match == NULL) {
-                // TODO: handle error
                 close(fd);
                 exit(EXIT_FAILURE);
             }
             if (state.buffer == match) {
-                // meet the combination CRLF CRLF
+                // meet the combination \r\n\r\n
                 break;
             }
             char *line = state.buffer;
             chop_left(&state, (match - line) + strlen(pattern));
-            char *field = strtok(line, ": ");
-            char *value = strtok(NULL, "\r\n");
+            const char *field = strtok(line, ": ");
+            const char *value = strtok(NULL, "\r\n");
             assert(*match == '\0');
             printf("Parse: %s:%s\n", field, value);
         }
-        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nGET";
         write_some(fd, default_response, strlen(default_response));
     }
     else if (!strcmp(header.method, "POST")) {
-        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nPOST";
         write_some(fd, default_response, strlen(default_response));
     }
     else {

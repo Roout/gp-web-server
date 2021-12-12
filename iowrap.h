@@ -32,7 +32,7 @@ int read_some(int fd, char *buffer, size_t size);
  * Return value less or equal 0 if any error occured
  * otherwise return number of written bytes on success
  */
-int write_some(int fd, char *buffer, size_t size);
+int write_some(int fd, const char *buffer, size_t size);
 
 /**
  * Read from socket with descriptor `fd` to `dst` buffer starting from position `*size`
@@ -45,6 +45,6 @@ int write_some(int fd, char *buffer, size_t size);
  * 
  * @return pointer to the matched string on success otherwise return NULL
 */
-char* read_until(int fd, BufferState *state, char *pattern);
+char* read_until(int fd, BufferState *state, const char *pattern);
 
 #endif // IO_WRAPPERS_H__

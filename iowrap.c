@@ -47,7 +47,7 @@ int read_some(int fd, char *buffer, size_t size) {
  * Return value less or equal 0 if any error occured
  * otherwise return number of written bytes on success
  */
-int write_some(int fd, char *buffer, size_t size) {
+int write_some(int fd, const char *buffer, size_t size) {
     size_t total_bytes = 0;
     // we need to confirm that the whole buffer is sent
     while (total_bytes < size) {
@@ -74,7 +74,7 @@ int write_some(int fd, char *buffer, size_t size) {
  * 
  * @return pointer to the matched string on success otherwise return NULL
 */
-char* read_until(int fd, BufferState *state, char *pattern) {
+char* read_until(int fd, BufferState *state, const char *pattern) {
     assert(state != NULL);
     assert(pattern != NULL);
 
