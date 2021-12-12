@@ -22,24 +22,24 @@
 // client buffer
 #define BUFFER_SIZE (1<<16)
 
-void HandleClient(int fd);
+void handle_client(int fd);
 
 int main() {
     printf("Server started at %s%s:%s%s\n", "\033[92m", HOST, PORT, "\033[0m");
 
     Server server;
-    InitServer(&server, HOST, PORT, BACKLOG);
+    init_server(&server, HOST, PORT, BACKLOG);
     // accept clients
     while (1) {
-		int client_fd = AcceptClient(&server);
-        HandleClient(client_fd);
+		int client_fd = accept_client(&server);
+        handle_client(client_fd);
     }
     return 0;
 }
 
 typedef struct {
     char *method;   // GET or POST
-    char *path;     // /path/to/file
+    char *route;     // /route/to/file
     char *protocol; // HTTP/1.1
 } RequestHeader;
 
@@ -48,13 +48,13 @@ typedef struct {
  * @param header parsing result on success
  * @return 0 on success otherwise -1
 */
-int ParseHeader(char* data, RequestHeader* header) {
+int parse_header(char* data, RequestHeader* header) {
     header->method = strtok(data, " ");
     if (header->method == NULL) {
         return -1;
     }
-    header->path = strtok(NULL, " ");
-    if (header->path == NULL) {
+    header->route = strtok(NULL, " ");
+    if (header->route == NULL) {
         return -1;
     }
     header->protocol = strtok(NULL, " ");
@@ -64,7 +64,7 @@ int ParseHeader(char* data, RequestHeader* header) {
     return 0;
 }
 
-void HandleClient(int fd) {
+void handle_client(int fd) {
     // global buffer for this client
     char buffer[BUFFER_SIZE + 1];
     char *pattern = CRLF;
@@ -79,7 +79,7 @@ void HandleClient(int fd) {
     char *match = read_until(fd, &state, pattern);
     if (match == NULL) {
         fprintf(stderr, "Failed to read header.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     // header is the line: [buffer, match)
     *match = '\0';
@@ -88,11 +88,11 @@ void HandleClient(int fd) {
     chop_left(&state, (match - line) + strlen(pattern));
 		
     RequestHeader header;
-    if (ParseHeader(line, &header) < 0) {
+    if (parse_header(line, &header) < 0) {
         // TODO: handle error
         fprintf(stderr, "Fail to parse a header\n");
         close(fd);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (!strcmp(header.method, "GET")) {
@@ -101,7 +101,7 @@ void HandleClient(int fd) {
             if (match == NULL) {
                 // TODO: handle error
                 close(fd);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             if (state.buffer == match) {
                 // meet the combination CRLF CRLF
@@ -113,11 +113,26 @@ void HandleClient(int fd) {
             char *value = strtok(NULL, "\r\n");
             assert(*match == '\0');
             // *match = '\0';
-            printf("%s:%s\n", field, value);
+            printf("Parse: %s:%s\n", field, value);
         }
         // TODO: check what answer is needed in rfc
-        char default_answer[] = "HTTP/1.1 200 OK" CRLF "Content-Length: 0" CRLF CRLF;
-        write_some(fd, default_answer, strlen(default_answer));
+        const char *default_response = "HTTP/1.1 200 OK" CRLF "Content-Length: 0" CRLF CRLF;
+        char response[256];
+        const char *file = get_file(server->route, header.route);
+        Buffer file_buffer;
+        if (file && read_file(file, &file_buffer) != -1) {
+            sprintf(response, "HTTP/1.1 200 OK" CRLF "Content-Length: %d" CRLF CRLF "%s"
+                , file_buffer->size
+                , file_buffer->buffer);
+            // cleanup
+            free(file_buffer->buffer);
+            file_buffer->buffer = NULL;
+            file_buffer->size = 0;
+        }
+        else {
+            strcpy(response, default_response);
+        }
+        write_some(fd, response, strlen(response));
     }
     else if (!strcmp(header.method, "POST")) {
         // TODO: check what answer is needed in rfc
