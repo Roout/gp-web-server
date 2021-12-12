@@ -124,10 +124,10 @@ char* read_until(int fd, BufferState *state, char *pattern) {
 }
 
 int read_file(const char* filename, Buffer *dst) {
-    assert(buffer);
-    assert(filename);
+    assert(dst);
+		assert(filename);
 
-    FILE* file = open(filename, "rb");
+    FILE* file = fopen(filename, "rb");
     if (file == NULL) {
         fprintf(stderr, "Fail to open the file %s with error: %s\n"
             , filename
@@ -135,22 +135,22 @@ int read_file(const char* filename, Buffer *dst) {
         return -1;
     }
     fseek(file, 0, SEEK_END);
-    long size = ftell(file);
+    long filesize = ftell(file);
     if (filesize == EOF) {
         return -1;
     }
-    char *buffer = (char*) malloc(sizeof(char) * (size + 1));
+    char *buffer = (char*) malloc(sizeof(char) * (filesize + 1));
     if (buffer == NULL) {
         fprintf(stderr, "Not enough memory for the file %s\n"
             , filename);
         return -1;
     }
-    buffer[size] = '\0';
+    buffer[filesize] = '\0';
     // set cursor to the file's begining
     rewind(file);
     // read
-    size_t read_items = fread(buffer, 1, size, file);
-    if (read_items < size) {
+    long read_items = fread(buffer, 1, filesize, file);
+    if (read_items < filesize) {
         fprintf(stderr, "Fail to read the file %s with error: %s\n"
             , filename
             , strerror(errno));
@@ -159,7 +159,7 @@ int read_file(const char* filename, Buffer *dst) {
     }
     // update buffer
     dst->buffer = buffer;
-    dst->size = size;
+    dst->size = filesize;
     fclose(file);
     // success
     return 0;

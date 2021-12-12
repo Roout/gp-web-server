@@ -22,7 +22,7 @@
 // client buffer
 #define BUFFER_SIZE (1<<16)
 
-void handle_client(int fd);
+void handle_client(Server *server, int fd);
 
 int main() {
     printf("Server started at %s%s:%s%s\n", "\033[92m", HOST, PORT, "\033[0m");
@@ -32,7 +32,7 @@ int main() {
     // accept clients
     while (1) {
 		int client_fd = accept_client(&server);
-        handle_client(client_fd);
+        handle_client(&server, client_fd);
     }
     return 0;
 }
@@ -64,7 +64,7 @@ int parse_header(char* data, RequestHeader* header) {
     return 0;
 }
 
-void handle_client(int fd) {
+void handle_client(Server* server, int fd) {
     // global buffer for this client
     char buffer[BUFFER_SIZE + 1];
     char *pattern = CRLF;
@@ -112,22 +112,22 @@ void handle_client(int fd) {
             char *field = strtok(line, ": ");
             char *value = strtok(NULL, "\r\n");
             assert(*match == '\0');
-            // *match = '\0';
             printf("Parse: %s:%s\n", field, value);
         }
         // TODO: check what answer is needed in rfc
-        const char *default_response = "HTTP/1.1 200 OK" CRLF "Content-Length: 0" CRLF CRLF;
+        const char *default_response = "HTTP/1.1 404 Not Found" CRLF "Content-Length: 0" CRLF CRLF;
         char response[256];
-        const char *file = get_file(server->route, header.route);
+        const char *file = get_file(server, header.route);
         Buffer file_buffer;
         if (file && read_file(file, &file_buffer) != -1) {
-            sprintf(response, "HTTP/1.1 200 OK" CRLF "Content-Length: %d" CRLF CRLF "%s"
-                , file_buffer->size
-                , file_buffer->buffer);
+            sprintf(response
+								, "HTTP/1.1 200 OK" CRLF "Content-Length: %zu" CRLF CRLF "%s"
+                , file_buffer.size
+                , file_buffer.buffer);
             // cleanup
-            free(file_buffer->buffer);
-            file_buffer->buffer = NULL;
-            file_buffer->size = 0;
+            free(file_buffer.buffer);
+            file_buffer.buffer = NULL;
+            file_buffer.size = 0;
         }
         else {
             strcpy(response, default_response);

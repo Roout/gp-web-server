@@ -14,11 +14,24 @@
 
 #include <netdb.h>
 
+// bind all available routes to the existing files
+static void register_routes(Server *server) {
+    // add all basic already existing routes
+    register_route(server, "/", "res/index.html");
+    register_route(server, "/index.html", "res/index.html");
+    register_route(server, "/about", "res/about.txt");
+    register_route(server, "/test/other/route", "res/test/other/route.txt");
+    register_route(server, "/test/other/test", "res/test/other/test.html");
+}
+
 void init_server(Server *server
     , const char* host
     , const char* port
     , const int backlog) 
 {
+		assert(server);
+		memset(server, 0, sizeof(*server)); 
+
     const char *node = NULL;
     if (!host || !*host || !strcmp(host, "*")) {
         node = NULL;
@@ -92,7 +105,7 @@ void init_server(Server *server
     register_routes(server);
 }
 
-int accpet_client(Server *server) {
+int accept_client(Server *server) {
     // accept clients
     struct sockaddr_in client_addr;
     while (1) {
@@ -125,12 +138,3 @@ const char * get_file(Server *server, const char* route) {
     return node->file;
 }
 
-// bind all available routes to the existing files
-static void register_routes(Server *server) {
-    // add all basic already existing routes
-    register_route(server, "/", "/res/index.html");
-    register_route(server, "/index.html", "/res/index.html");
-    register_route(server, "/about", "/res/about.txt");
-    register_route(server, "/test/other/route", "/res/test/other/route.txt");
-    register_route(server, "/test/other/test", "/res/test/other/test.txt");
-}
