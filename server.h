@@ -16,13 +16,15 @@ typedef struct {
 } Server;
 
 // initialize a server
-void InitServer(Server *server
+void init_server(Server *server
     , const char* host
     , const char* port
     , const int backlog);
 
-int AcceptClient(Server *server);
+int accept_client(Server *server);
 
-void RegisterRoute(Server *server, const char* path, const char* file);
+void register_route(Server *server, const char* route, const char* file);
+
+const char * get_file(Server *server, const char* route);
 
 #endif // SERVER_H__

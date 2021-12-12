@@ -14,7 +14,7 @@
 
 #include <netdb.h>
 
-void InitServer(Server *server
+void init_server(Server *server
     , const char* host
     , const char* port
     , const int backlog) 
@@ -89,10 +89,10 @@ void InitServer(Server *server
     server->fd = fd;
 
     // add routes to server resources
-    RegisterRoutes(server);
+    register_routes(server);
 }
 
-int AcceptClient(Server *server) {
+int accpet_client(Server *server) {
     // accept clients
     struct sockaddr_in client_addr;
     while (1) {
@@ -112,17 +112,25 @@ int AcceptClient(Server *server) {
     return -1;
 }
 
-void RegisterRoute(Server *server, const char* path, const char* file) {
+void register_route(Server *server, const char* path, const char* file) {
     printf("register route %s to file: %s\n", path, file); 
-    Insert(&server->route, path, file);
+    insert_list(&server->route, path, file);
+}
+
+const char * get_file(Server *server, const char* route) {
+    struct Node *node = find_route(server->route, route);
+    if (node == NULL) {
+        return NULL;
+    }
+    return node->file;
 }
 
 // bind all available routes to the existing files
-static void RegisterRoutes(Server *server) {
+static void register_routes(Server *server) {
     // add all basic already existing routes
-    RegisterRoute(server, "/", "/res/index.html");
-    RegisterRoute(server, "/index.html", "/res/index.html");
-    RegisterRoute(server, "/about", "/res/about.txt");
-    RegisterRoute(server, "/test/other/route", "/res/test/other/route.txt");
-    RegisterRoute(server, "/test/other/test", "/res/test/other/test.txt");
+    register_route(server, "/", "/res/index.html");
+    register_route(server, "/index.html", "/res/index.html");
+    register_route(server, "/about", "/res/about.txt");
+    register_route(server, "/test/other/route", "/res/test/other/route.txt");
+    register_route(server, "/test/other/test", "/res/test/other/test.txt");
 }
