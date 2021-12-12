@@ -4,22 +4,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-void Insert(struct Node **head, const char* path, const char* file) {
+void insert_list(struct Node **head, const char* route, const char* file) {
     struct Node *node = (struct Node*) malloc(sizeof(struct Node));
     node->next = NULL;
-    node->path = (char *) malloc(strlen(path) + 1);
+    node->route = (char *) malloc(strlen(route) + 1);
     node->file = (char *) malloc(strlen(file) + 1);
     if (node == NULL 
-        || node->path == NULL 
+        || node->route == NULL 
         || node->file == NULL) 
     { // fail to allocate enough memory
         fprintf(stderr, "Cannot allocate a memory.\n");
         free(node->file);
-        free(node->path);
+        free(node->route);
         free(node);
         exit(1);
     }
-    strcpy(node->path, path);
+    strcpy(node->route, route);
     strcpy(node->file, file);
     if (*head == NULL) {
         *head = node;
@@ -32,7 +32,7 @@ void Insert(struct Node **head, const char* path, const char* file) {
     cur->next = node;
 }
 
-void Clean(struct Node **head) {
+void clean_list(struct Node **head) {
     struct Node *node = *head;
     while (node) {
         struct Node *next = node->next;
@@ -42,10 +42,10 @@ void Clean(struct Node **head) {
     *head = NULL;
 }
 
-struct Node* Find(struct Node* head, const char* path) {
+struct Node* find_route(struct Node* head, const char* route) {
     struct Node *node = head;
     while (node) {
-        if (!strcmp(node->path, path)) {
+        if (!strcmp(node->route, route)) {
             return node;
         }
         node = node->next;

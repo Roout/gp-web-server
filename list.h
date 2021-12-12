@@ -2,15 +2,15 @@
 #define LIST_H__
 
 struct Node {
-    char *path;
+    char *route;
     char *file;
     struct Node *next;
 };
 
-void Insert(struct Node **head, const char* path, const char* file);
+void insert_list(struct Node **head, const char* route, const char* file);
 
-void Clean(struct Node **head);
+void clean_list(struct Node **head);
 
-struct Node* Find(struct Node* head, const char* path);
+struct Node* find_route(struct Node* head, const char* route);
 
 #endif // LIST_H__
