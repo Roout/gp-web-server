@@ -2,11 +2,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
-#include <error.h> 
 #include <string.h> 
 
-#include <sys/types.h> 
-#include <sys/socket.h> 
 #include <unistd.h>		// close
 
 #include "iowrap.h"
@@ -16,10 +13,13 @@
 #define PORT "18000"
 #define BACKLOG 64
 
-// client buffer
+// client's buffer size used for reading incoming requests
+// if the request will be longer than this size then 
+// server will stop reading and close the connection 
 #define BUFFER_SIZE (1<<16)
 
-void handle_client(int fd);
+// handle client with provided socket descriptor `fd`
+static void handle_client(int fd);
 
 int main() {
     printf("Server started at %shttp://%s:%s%s\n", "\033[92m", HOST, PORT, "\033[0m");
@@ -35,9 +35,9 @@ int main() {
 }
 
 typedef struct {
-    char *method;   // GET or POST
-    char *route;    // /route/to/file
-    char *protocol; // HTTP/1.1
+    const char *method;   // GET or POST
+    const char *route;    // /route/to/file
+    const char *protocol; // HTTP/1.1
 } RequestHeader;
 
 /**
@@ -61,7 +61,7 @@ int parse_header(char* data, RequestHeader* header) {
     return 0;
 }
 
-void handle_client(int fd) {
+static void handle_client(int fd) {
     // global buffer for this client
     char buffer[BUFFER_SIZE + 1];
     const char *pattern = "\r\n";
