@@ -16,7 +16,7 @@
 // size of listen's queue
 #define BACKLOG 64
 // maximum number of connections the server can maintain simultaneously
-#define MAX_CONNECTIONS 3 
+#define MAX_CONNECTIONS 1000
 
 // client's buffer size used for reading incoming requests
 // if the request will be longer than this size then 
