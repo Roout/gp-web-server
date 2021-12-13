@@ -63,7 +63,7 @@ int main() {
     // accept clients
     while (1) {
         if (wait_slots(&process_count) < 0) {
-            // failed to terminate a process
+            // failed to terminate any child process
             exit(EXIT_FAILURE);
         }
 		int client_fd = accept_client(&server);
@@ -112,20 +112,17 @@ static int wait_slots(size_t *process_count) {
         return 0;
     }
     // otherwise hang server until there will be free slot
-    printf("There is already %zu connections. Wait for free slot...\n", *process_count);
     int wstatus = 0;
     pid_t pid = 0;
-    // Try to handle as many terminated processes as possible in non-blocking mode
+    // try to handle as many terminated processes as possible in non-blocking mode
     while ((pid = waitpid(-1, &wstatus, WNOHANG)) != 0) {
         // handle success or error in function `handle_client_pid`
         if (handle_client_pid(pid, wstatus, process_count) < 0) {
             return -1;
         }
-        printf("Handle terminated process %d in non-blocking way\n", pid);
     }
     // if still no free connections -> block until there will be one
     if (*process_count == MAX_CONNECTIONS) {
-        printf("Block until any process will be terminated\n");
         wstatus = 0;
         // default option = 0 (last arg)
         // because it waits only for terminated children
@@ -135,7 +132,6 @@ static int wait_slots(size_t *process_count) {
         }
     }
     // success
-    printf("Connections: %zu/%d\n", *process_count, MAX_CONNECTIONS);
     return 0;
 }
 
@@ -202,16 +198,22 @@ static void handle_client(int fd) {
         while (match != NULL) {
             match = read_until(fd, &state, pattern);
             if (match == NULL) {
+                // unexpected format of the input request
                 close(fd);
-                exit(EXIT_FAILURE);
+                return;
             }
             if (state.buffer == match) {
-                // meet the combination \r\n\r\n
+                // meet the combination \r\n\r\n which means end of the GET request
                 break;
             }
+            // skip already processes part of request
             char *line = state.buffer;
             chop_left(&state, (match - line) + strlen(pattern));
-			*match = '\0';
+            
+            // (note, this is done within child process and access to stdout is not synchronized
+            // so it can be used only for testing)
+            // To print parsed {filed : value} uncomment lines below
+
             // const char *field = strtok(line, ": ");
             // const char *value = strtok(NULL, "\r\n");
             // assert(*match == '\0');
