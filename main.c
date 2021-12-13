@@ -14,7 +14,7 @@
 #define PORT "18001"
 // size of listen's queue
 #define BACKLOG 64
-#define MAX_CONNECTIONS 100
+#define MAX_CONNECTIONS 3 
 
 // client's buffer size used for reading incoming requests
 // if the request will be longer than this size then 
@@ -73,7 +73,7 @@ static int handle_client_pid(pid_t pid, int wstatus, size_t *proccess_count) {
     }
     // proccess was terminated
     assert(*proccess_count > 0);
-    *proccess_count--;
+    (*proccess_count)--;
     if (!WIFEXITED(wstatus)) {
         // child isn't terminated normally by exit(...)
         // log this to stderr
@@ -97,9 +97,11 @@ static int wait_slots(size_t *proccess_count) {
         if (handle_client_pid(pid, wstatus, proccess_count) < 0) {
             return -1;
         }
+				printf("Handle terminated proccess %d in non-blocking way\n", pid);
     }
     // if still no free connections -> block until there will be one
     if (*proccess_count == MAX_CONNECTIONS) {
+				printf("Block until any proccess will be terminated\n");
         wstatus = 0;
         // default option = 0 (last arg)
         // because it waits only for terminated children
@@ -109,6 +111,7 @@ static int wait_slots(size_t *proccess_count) {
         }
     }
     // success
+		printf("Connections: %zu/%d\n", *proccess_count, MAX_CONNECTIONS);
     return 0;
 }
 
@@ -182,10 +185,11 @@ static void handle_client(int fd) {
             }
             char *line = state.buffer;
             chop_left(&state, (match - line) + strlen(pattern));
-            const char *field = strtok(line, ": ");
-            const char *value = strtok(NULL, "\r\n");
-            assert(*match == '\0');
-            printf("Parse: %s:%s\n", field, value);
+						*match = '\0';
+            // const char *field = strtok(line, ": ");
+            // const char *value = strtok(NULL, "\r\n");
+            // assert(*match == '\0');
+            // printf("Parse: %s:%s\n", field, value);
         }
         const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nGET";
         write_some(fd, default_response, strlen(default_response));
