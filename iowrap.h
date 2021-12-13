@@ -9,14 +9,10 @@ typedef struct {
     size_t capacity; // full `buffer` capacity
 } BufferState;
 
+/**
+ * Shift buffer by `bytes` to the right
+*/
 void chop_left(BufferState* state, size_t bytes);
-
-// Owing memory buffer
-// Memory need to be freed
-typedef struct {
-    char *buffer;
-    size_t size;
-} Buffer;
 
 /* 
  * Read from socket to buffer of maxsize `size`
@@ -36,7 +32,7 @@ int write_some(int fd, const char *buffer, size_t size);
 
 /**
  * Read from socket with descriptor `fd` to `dst` buffer starting from position `*size`
- * until either `*size` becomes equal `capacity` or the `pattern` is met. 
+ * until either `*size` becames equal `capacity` or the `pattern` is met. 
  * Note, can modify `*size` to indicate how many bytes we've read 
  * 
  * @param fd socket descriptor

@@ -12,8 +12,10 @@
 
 #define HOST "127.0.0.1"
 #define PORT "18001"
+
 // size of listen's queue
 #define BACKLOG 64
+// maximum number of connections the server can maintain simultaneously
 #define MAX_CONNECTIONS 3 
 
 // client's buffer size used for reading incoming requests
@@ -21,12 +23,34 @@
 // server will stop reading and close the connection 
 #define BUFFER_SIZE (1<<16)
 
-// handle client with provided socket descriptor `fd`
+/**
+ * Handle client with provided socket descriptor `fd`
+ * It's being invoked in child process
+ * 
+ * @param fd socket descriptor of the accepted client
+ */
 static void handle_client(int fd);
 
-static int handle_client_pid(pid_t pid, int wstatus, size_t *proccess_count);
+/**
+ * Process result of the waitpid (pid, wstatus) and modify process_count on success
+ * 
+ * @param pid pid of the child process
+ * @param wstatus status of the child process assigned by `waitpid`
+ * @param process_count counter of the active child processes (connections)
+ * 
+ * @return -1 of failure otherwise 0
+ */
+static int handle_client_pid(pid_t pid, int wstatus, size_t *process_count);
 
-static int wait_slots(size_t *proccess_count);
+/**
+ * Wait until number of active processes will be lesser than MAX_CONNECTION constant
+ * Use `waitpid` to handle alread terminated child processes
+ * 
+ * @param process_count number of created child processes/connections
+ * 
+ * @return -1 of failure otherwise 0
+ */
+static int wait_slots(size_t *process_count);
 
 int main() {
     printf("Server started at %shttp://%s:%s%s\n", "\033[92m", HOST, PORT, "\033[0m");
@@ -34,29 +58,29 @@ int main() {
     Server server;
     init_server(&server, HOST, PORT, BACKLOG);
 
-    // number of not-terminated proccesses
-    size_t proccess_count = 0;
+    // number of not-terminated processes
+    size_t process_count = 0;
     // accept clients
     while (1) {
-        if (wait_slots(&proccess_count) < 0) {
-            // failed to terminate a proccess
+        if (wait_slots(&process_count) < 0) {
+            // failed to terminate a process
             exit(EXIT_FAILURE);
         }
 		int client_fd = accept_client(&server);
         int pid = fork();
         if (pid < 0) { // error
-            fprintf(stderr, "Failed to create a child proccess for the new client.\n");
+            fprintf(stderr, "Failed to create a child process for the new client.\n");
             fprintf(stderr, "Reason: %s\n", strerror(errno));
             close(client_fd);
         }
-        else if (pid == 0) { // here goes child proccess's branch
+        else if (pid == 0) { // here goes child process's branch
             handle_client(client_fd);
             exit(EXIT_SUCCESS);
         }
         else { // parent's branch
-            // proccess was created successfully
-            proccess_count++;
-            // parent proccess
+            // process was created successfully
+            process_count++;
+            // parent process
             // close the fd because only the child should own it now
             close(client_fd);
         }
@@ -64,16 +88,16 @@ int main() {
     return 0;
 }
 
-static int handle_client_pid(pid_t pid, int wstatus, size_t *proccess_count) {
-    assert(proccess_count);
+static int handle_client_pid(pid_t pid, int wstatus, size_t *process_count) {
+    assert(process_count);
     if (pid == -1) {
         fprintf(stderr, "waitpid failed.\n");
         fprintf(stderr, "Reason: %s\n", strerror(errno));
         return -1;
     }
-    // proccess was terminated
-    assert(*proccess_count > 0);
-    (*proccess_count)--;
+    // process was terminated
+    assert(*process_count > 0);
+    (*process_count)--;
     if (!WIFEXITED(wstatus)) {
         // child isn't terminated normally by exit(...)
         // log this to stderr
@@ -82,36 +106,36 @@ static int handle_client_pid(pid_t pid, int wstatus, size_t *proccess_count) {
     return 0;
 }
 
-static int wait_slots(size_t *proccess_count) {
-    assert(proccess_count);
-    if (*proccess_count < MAX_CONNECTIONS) {
+static int wait_slots(size_t *process_count) {
+    assert(process_count);
+    if (*process_count < MAX_CONNECTIONS) {
         return 0;
     }
     // otherwise hang server until there will be free slot
-    printf("There is already %zu connections. Wait for free slot...\n", *proccess_count);
+    printf("There is already %zu connections. Wait for free slot...\n", *process_count);
     int wstatus = 0;
     pid_t pid = 0;
-    // Try to handle as many terminated proccesses as possible in non-blocking mode
+    // Try to handle as many terminated processes as possible in non-blocking mode
     while ((pid = waitpid(-1, &wstatus, WNOHANG)) != 0) {
         // handle success or error in function `handle_client_pid`
-        if (handle_client_pid(pid, wstatus, proccess_count) < 0) {
+        if (handle_client_pid(pid, wstatus, process_count) < 0) {
             return -1;
         }
-				printf("Handle terminated proccess %d in non-blocking way\n", pid);
+        printf("Handle terminated process %d in non-blocking way\n", pid);
     }
     // if still no free connections -> block until there will be one
-    if (*proccess_count == MAX_CONNECTIONS) {
-				printf("Block until any proccess will be terminated\n");
+    if (*process_count == MAX_CONNECTIONS) {
+        printf("Block until any process will be terminated\n");
         wstatus = 0;
         // default option = 0 (last arg)
         // because it waits only for terminated children
         pid = waitpid(-1, &wstatus, 0);
-        if (handle_client_pid(pid, wstatus, proccess_count) < 0) {
+        if (handle_client_pid(pid, wstatus, process_count) < 0) {
             return -1;
         }
     }
     // success
-		printf("Connections: %zu/%d\n", *proccess_count, MAX_CONNECTIONS);
+    printf("Connections: %zu/%d\n", *process_count, MAX_CONNECTIONS);
     return 0;
 }
 
@@ -173,6 +197,8 @@ static void handle_client(int fd) {
     }
 
     if (!strcmp(header.method, "GET")) {
+        // example how to parse headers { key : value } from the request
+        // using read_until
         while (match != NULL) {
             match = read_until(fd, &state, pattern);
             if (match == NULL) {
@@ -185,22 +211,22 @@ static void handle_client(int fd) {
             }
             char *line = state.buffer;
             chop_left(&state, (match - line) + strlen(pattern));
-						*match = '\0';
+			*match = '\0';
             // const char *field = strtok(line, ": ");
             // const char *value = strtok(NULL, "\r\n");
             // assert(*match == '\0');
             // printf("Parse: %s:%s\n", field, value);
         }
-        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nGET";
-        write_some(fd, default_response, strlen(default_response));
+        const char *response = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nGET";
+        write_some(fd, response, strlen(response));
     }
     else if (!strcmp(header.method, "POST")) {
-        const char *default_response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nPOST";
-        write_some(fd, default_response, strlen(default_response));
+        const char *response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nPOST";
+        write_some(fd, response, strlen(response));
     }
     else {
-        const char *default_response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
-        write_some(fd, default_response, strlen(default_response));
+        const char *response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
+        write_some(fd, response, strlen(response));
     }
     
     close(fd);

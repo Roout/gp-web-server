@@ -18,9 +18,9 @@ void chop_left(BufferState* state, size_t bytes) {
     state->capacity -= bytes;
 }
 
-/* 
+/** 
  * Read from socket to buffer of maxsize `size`
-
+ *
  * @return -1 if some error occured, 0 on EOF,
  *			otherwise return number of read bytes on success
  *			and fill the buffer with null-terminated string
@@ -42,10 +42,12 @@ int read_some(int fd, char *buffer, size_t size) {
     return read_bytes;
 }   
 
-/* 
+/** 
  * Write to socket the buffer's content of size equal `size` 
  * Return value less or equal 0 if any error occured
  * otherwise return number of written bytes on success
+ * 
+ * @return number of written bytes on success otherwise a value <= 0
  */
 int write_some(int fd, const char *buffer, size_t size) {
     size_t total_bytes = 0;
