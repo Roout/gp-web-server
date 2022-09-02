@@ -9,14 +9,10 @@ typedef struct {
     size_t capacity; // full `buffer` capacity
 } BufferState;
 
+/**
+ * Shift buffer by `bytes` to the right
+*/
 void chop_left(BufferState* state, size_t bytes);
-
-// Owing memory buffer
-// Memory need to be freed
-typedef struct {
-    char *buffer;
-    size_t size;
-} Buffer;
 
 /* 
  * Read from socket to buffer of maxsize `size`
@@ -32,11 +28,11 @@ int read_some(int fd, char *buffer, size_t size);
  * Return value less or equal 0 if any error occured
  * otherwise return number of written bytes on success
  */
-int write_some(int fd, char *buffer, size_t size);
+int write_some(int fd, const char *buffer, size_t size);
 
 /**
  * Read from socket with descriptor `fd` to `dst` buffer starting from position `*size`
- * until either `*size` becomes equal `capacity` or the `pattern` is met. 
+ * until either `*size` becames equal `capacity` or the `pattern` is met. 
  * Note, can modify `*size` to indicate how many bytes we've read 
  * 
  * @param fd socket descriptor
@@ -45,12 +41,6 @@ int write_some(int fd, char *buffer, size_t size);
  * 
  * @return pointer to the matched string on success otherwise return NULL
 */
-char* read_until(int fd, BufferState *state, char *pattern);
-
-/**
- * Read the whole file `filename` to buffer `dst` and allocate memory for it
- * @return 0 on success, otherwise -1
- */
-int read_file(const char* filename, Buffer* dst);
+char* read_until(int fd, BufferState *state, const char *pattern);
 
 #endif // IO_WRAPPERS_H__

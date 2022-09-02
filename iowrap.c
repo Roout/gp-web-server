@@ -18,9 +18,9 @@ void chop_left(BufferState* state, size_t bytes) {
     state->capacity -= bytes;
 }
 
-/* 
+/** 
  * Read from socket to buffer of maxsize `size`
-
+ *
  * @return -1 if some error occured, 0 on EOF,
  *			otherwise return number of read bytes on success
  *			and fill the buffer with null-terminated string
@@ -42,12 +42,14 @@ int read_some(int fd, char *buffer, size_t size) {
     return read_bytes;
 }   
 
-/* 
+/** 
  * Write to socket the buffer's content of size equal `size` 
  * Return value less or equal 0 if any error occured
  * otherwise return number of written bytes on success
+ * 
+ * @return number of written bytes on success otherwise a value <= 0
  */
-int write_some(int fd, char *buffer, size_t size) {
+int write_some(int fd, const char *buffer, size_t size) {
     size_t total_bytes = 0;
     // we need to confirm that the whole buffer is sent
     while (total_bytes < size) {
@@ -74,7 +76,7 @@ int write_some(int fd, char *buffer, size_t size) {
  * 
  * @return pointer to the matched string on success otherwise return NULL
 */
-char* read_until(int fd, BufferState *state, char *pattern) {
+char* read_until(int fd, BufferState *state, const char *pattern) {
     assert(state != NULL);
     assert(pattern != NULL);
 
@@ -121,46 +123,4 @@ char* read_until(int fd, BufferState *state, char *pattern) {
     }
     // found nothing but capacity is not enough
     return NULL;
-}
-
-int read_file(const char* filename, Buffer *dst) {
-    assert(dst);
-		assert(filename);
-
-    FILE* file = fopen(filename, "rb");
-    if (file == NULL) {
-        fprintf(stderr, "Fail to open the file %s with error: %s\n"
-            , filename
-            , strerror(errno));
-        return -1;
-    }
-    fseek(file, 0, SEEK_END);
-    long filesize = ftell(file);
-    if (filesize == EOF) {
-        return -1;
-    }
-    char *buffer = (char*) malloc(sizeof(char) * (filesize + 1));
-    if (buffer == NULL) {
-        fprintf(stderr, "Not enough memory for the file %s\n"
-            , filename);
-        return -1;
-    }
-    buffer[filesize] = '\0';
-    // set cursor to the file's begining
-    rewind(file);
-    // read
-    long read_items = fread(buffer, 1, filesize, file);
-    if (read_items < filesize) {
-        fprintf(stderr, "Fail to read the file %s with error: %s\n"
-            , filename
-            , strerror(errno));
-        free(buffer);
-        return -1;
-    }
-    // update buffer
-    dst->buffer = buffer;
-    dst->size = filesize;
-    fclose(file);
-    // success
-    return 0;
 }

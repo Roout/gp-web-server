@@ -1,5 +1,4 @@
 #include "server.h"
-#include "list.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,23 +13,14 @@
 
 #include <netdb.h>
 
-// bind all available routes to the existing files
-static void register_routes(Server *server) {
-    // add all basic already existing routes
-    register_route(server, "/", "res/index.html");
-    register_route(server, "/index.html", "res/index.html");
-    register_route(server, "/about", "res/about.txt");
-    register_route(server, "/test/other/route", "res/test/other/route.txt");
-    register_route(server, "/test/other/test", "res/test/other/test.html");
-}
-
 void init_server(Server *server
     , const char* host
     , const char* port
     , const int backlog) 
 {
-		assert(server);
-		memset(server, 0, sizeof(*server)); 
+    assert(server);
+    // zero-out
+    memset(server, 0, sizeof(*server)); 
 
     const char *node = NULL;
     if (!host || !*host || !strcmp(host, "*")) {
@@ -42,10 +32,10 @@ void init_server(Server *server
 
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;     /* Allow IPv4 and IPv6 */
-    hints.ai_socktype = SOCK_STREAM; /* TCP socket */
-    hints.ai_flags = AI_PASSIVE;     /* For wildcard IP address */
-    hints.ai_protocol = 0;           /* Any protocol */
+    hints.ai_family = AF_UNSPEC;     // Allow IPv4 and IPv6
+    hints.ai_socktype = SOCK_STREAM; // TCP socket
+    hints.ai_flags = AI_PASSIVE;     // For wildcard IP address
+    hints.ai_protocol = 0;           // Any protocol
     hints.ai_canonname = NULL;
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
@@ -53,13 +43,13 @@ void init_server(Server *server
     struct addrinfo *list;
     int ec = getaddrinfo(node, port, &hints, &list);
     if (ec != 0) {
-        fprintf(stderr, "[ERROR] getaddrinfo: %s\n", gai_strerror(ec));
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ec));
         exit(EXIT_FAILURE);
     }
 
     // getaddrinfo() returns a list of address structures.
-    // Try each address until we successfully bind(2).
-    // If socket(2) (or bind(2)) fails, we close the socket and try the next address. 
+    // Try each address until we successfully bind(2), setsockopt and listen on the socket.
+    // If any of these fails, we close the socket and try the next address. 
     struct addrinfo *curr = NULL;
     int fd = -1;
     for (curr = list; curr != NULL; curr = curr->ai_next) {
@@ -67,17 +57,17 @@ void init_server(Server *server
         if (fd == -1) {
             continue;
         }
-        
-        if (bind(fd, curr->ai_addr, curr->ai_addrlen) == -1) { 
-            close(fd);
-            fd = -1;
-            continue;
-        }
 
         // set reuse address option to prevent 
         // failure on bind for different IP but same PORT addresses
         int reuse = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1) {
+            close(fd);
+            fd = -1;
+            continue;
+        }
+
+        if (bind(fd, curr->ai_addr, curr->ai_addrlen) == -1) { 
             close(fd);
             fd = -1;
             continue;
@@ -95,14 +85,11 @@ void init_server(Server *server
 
     if (fd == -1) { 
         // No address succeeded
-        fprintf(stderr, "[ERROR] Could not create/bind/listen socket\n");
+        fprintf(stderr, "Could not create/bind/listen socket\n");
         exit(EXIT_FAILURE);
     }
 
     server->fd = fd;
-
-    // add routes to server resources
-    register_routes(server);
 }
 
 int accept_client(Server *server) {
@@ -125,16 +112,4 @@ int accept_client(Server *server) {
     return -1;
 }
 
-void register_route(Server *server, const char* path, const char* file) {
-    printf("register route %s to file: %s\n", path, file); 
-    insert_list(&server->route, path, file);
-}
-
-const char * get_file(Server *server, const char* route) {
-    struct Node *node = find_route(server->route, route);
-    if (node == NULL) {
-        return NULL;
-    }
-    return node->file;
-}
 
